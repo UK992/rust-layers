@@ -1,0 +1,28 @@
+environment:
+  PATH: 'C:\rust\bin;%PATH%'
+  matrix:
+  - ARCH: x86_64
+    ABI: gnu
+  - ARCH: x86_64
+    ABI: msvc
+  - ARCH: i686
+    ABI: msvc
+
+install:
+  - ps: Start-FileDownload "https://static.rust-lang.org/dist/rust-nightly-${env:ARCH}-pc-windows-${env:ABI}.exe"
+  - rust-nightly-%ARCH%-pc-windows-%ABI%.exe /VERYSILENT /NORESTART /DIR="C:\rust"
+  - IF "%ABI%"=="gnu" set PATH=C:\msys64\mingw64\bin;C:\msys64\usr\bin;%PATH%
+  - IF "%ABI%"=="gnu" set MSYSTEM=MSYS
+  - IF "%ABI%"=="gnu" set MSYS=winsymlinks=lnk
+  - IF "%ABI%"=="gnu" bash -lc "pacman --needed --noconfirm -Sy pacman-mirrors"
+  - IF "%ABI%"=="gnu" bash -lc "pacman --noconfirm -Sy"
+  - IF "%ABI%"=="gnu" bash -lc "pacman -Sy --needed --noconfirm mingw-w64-x86_64-expat mingw-w64-x86_64-freetype make mingw-w64-x86_64-cmake"
+  - IF "%ABI%"=="msvc" IF "%ARCH%" == "i686" CALL "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\vcvars32.bat"
+  - IF "%ABI%"=="msvc" IF "%ARCH%" == "x86_64" CALL "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\amd64\vcvars64.bat"
+
+build: off
+
+test_script:
+  # Cannot run `cargo test` on gnu, because of skia crate linking problem
+  - IF "%ABI%"=="gnu" cargo build --verbose
+  - IF "%ABI%"=="msvc" cargo test --verbose
